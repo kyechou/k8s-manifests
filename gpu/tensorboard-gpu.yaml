@@ -1,0 +1,85 @@
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: tensorboard-gpu
+  labels:
+    app: tensorboard-gpu
+  namespace: tensorboard
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: tensorboard-gpu
+  template:
+    metadata:
+      labels:
+        app: tensorboard-gpu
+      namespace: tensorboard
+    spec:
+      containers:
+        - name: tensorboard-gpu
+          image: kyechou/tensorflow:gpu-arch
+          resources:
+            requests:
+              alpha.kubernetes.io/nvidia-gpu: 8
+            limits:
+              alpha.kubernetes.io/nvidia-gpu: 8
+          env:
+            - name: PATH
+              value: "/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/nvidia/bin"
+            - name: LD_LIBRARY_PATH
+              value: "/nvidia/lib"
+          command:
+            - 'tensorboard'
+          args:
+            - '--logdir=/log'
+          ports:
+            - containerPort: 6006
+          volumeMounts:
+            - mountPath: /log
+              name: log
+            - mountPath: /nvidia/bin
+              name: nv-bin
+            - mountPath: /nvidia/lib
+              name: nv-lib
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 6006
+            initialDelaySeconds: 30
+            timeoutSeconds: 30
+      volumes:
+        - name: log
+          nfs:
+            server: '140.110.16.155'
+            path: /tensorboard/log
+        - name: nv-bin
+          nfs:
+            server: '140.110.16.155'
+            path: /nvidia/bin
+            readOnly: true
+        - name: nv-lib
+          nfs:
+            server: '140.110.16.155'
+            path: /nvidia/lib
+            readOnly: true
+      nodeSelector:
+        beta.kubernetes.io/os: linux
+        #alpha.kubernetes.io/nvidia-gpu-name: Tesla-P100-PCIE-12GB
+        #alpha.kubernetes.io/nvidia-gpu-name: Tesla-P100-SXM2-16GB
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tensorboard-gpu
+  labels:
+    app: tensorboard-gpu
+  namespace: tensorboard
+spec:
+  ports:
+    - protocol: TCP
+      targetPort: 6006
+      port: 80
+  selector:
+    app: tensorboard-gpu

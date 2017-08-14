@@ -1,0 +1,60 @@
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: tensorboard-cpu
+  labels:
+    app: tensorboard-cpu
+  namespace: tensorboard
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: tensorboard-cpu
+  template:
+    metadata:
+      name: tensorboard-cpu
+      labels:
+        app: tensorboard-cpu
+      namespace: tensorboard
+    spec:
+      containers:
+        - name: tensorboard-cpu
+          image: kyechou/tensorflow:cpu-arch
+          command:
+            - 'tensorboard'
+          args:
+            - '--logdir=/log'
+          ports:
+            - containerPort: 6006
+          volumeMounts:
+            - mountPath: /log
+              name: log
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 6006
+            initialDelaySeconds: 30
+            timeoutSeconds: 30
+      volumes:
+        - name: log
+          nfs:
+            server: '140.110.16.155'
+            path: /tensorboard/log
+      nodeSelector:
+        beta.kubernetes.io/os: linux
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tensorboard-cpu
+  labels:
+    app: tensorboard-cpu
+  namespace: tensorboard
+spec:
+  ports:
+    - protocol: TCP
+      targetPort: 6006
+      port: 80
+  selector:
+    app: tensorboard-cpu
