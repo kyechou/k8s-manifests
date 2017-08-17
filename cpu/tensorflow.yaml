@@ -1,33 +1,25 @@
 ---
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: tensorflow-cpu
-  labels:
-    app: tensorflow-cpu
----
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: tensorflow-cpu
+  name: tensorflow
   labels:
-    app: tensorflow-cpu
-  namespace: tensorflow-cpu
+    app: tensorflow
+  namespace: user
 spec:
   completions: 1
   parallelism: 1
   selector:
     matchLabels:
-      app: tensorflow-cpu
+      app: tensorflow
   template:
     metadata:
-      name: tensorflow-cpu
       labels:
-        app: tensorflow-cpu
-      namespace: tensorflow-cpu
+        app: tensorflow
+      namespace: user
     spec:
       containers:
-        - name: tensorflow-cpu
+        - name: tensorflow
           image: kyechou/tensorflow:cpu-arch
           command:
             - 'python'

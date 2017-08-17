@@ -2,24 +2,23 @@
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  name: tensorboard-cpu
+  name: tensorboard
   labels:
-    app: tensorboard-cpu
-  namespace: tensorboard
+    app: tensorboard
+  namespace: user
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
-      app: tensorboard-cpu
+      app: tensorboard
   template:
     metadata:
-      name: tensorboard-cpu
       labels:
-        app: tensorboard-cpu
-      namespace: tensorboard
+        app: tensorboard
+      namespace: user
     spec:
       containers:
-        - name: tensorboard-cpu
+        - name: tensorboard
           image: kyechou/tensorflow:cpu-arch
           command:
             - 'tensorboard'
@@ -47,14 +46,14 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: tensorboard-cpu
+  name: tensorboard
   labels:
-    app: tensorboard-cpu
-  namespace: tensorboard
+    app: tensorboard
+  namespace: user
 spec:
   ports:
     - protocol: TCP
       targetPort: 6006
       port: 80
   selector:
-    app: tensorboard-cpu
+    app: tensorboard

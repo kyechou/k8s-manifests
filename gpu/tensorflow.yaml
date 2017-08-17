@@ -1,33 +1,25 @@
 ---
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: tensorflow-gpu
-  labels:
-    app: tensorflow-gpu
----
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: tensorflow-gpu
+  name: tensorflow
   labels:
-    app: tensorflow-gpu
-  namespace: tensorflow-gpu
+    app: tensorflow
+  namespace: user
 spec:
   completions: 1
   parallelism: 1
   selector:
     matchLabels:
-      app: tensorflow-gpu
+      app: tensorflow
   template:
     metadata:
-      name: tensorflow-gpu
       labels:
-        app: tensorflow-gpu
-      namespace: tensorflow-gpu
+        app: tensorflow
+      namespace: user
     spec:
       containers:
-        - name: tensorflow-gpu
+        - name: tensorflow
           image: kyechou/tensorflow:gpu-arch
           resources:
             requests:
@@ -44,7 +36,7 @@ spec:
           args:
             - '/benchmarks/scripts/tf_cnn_benchmarks/tf_cnn_benchmarks.py'
             - '--local_parameter_device=gpu'
-            - '--num_gpus=1'
+            - '--num_gpus=8'
             - '--batch_size=64'
             - '--model=vgg16'
             - '--variable_update=replicated'
@@ -74,6 +66,6 @@ spec:
             readOnly: true
       nodeSelector:
         beta.kubernetes.io/os: linux
+        alpha.kubernetes.io/nvidia-gpu-name: Tesla-P100-SXM2-16GB
         #alpha.kubernetes.io/nvidia-gpu-name: Tesla-P100-PCIE-12GB
-        #alpha.kubernetes.io/nvidia-gpu-name: Tesla-P100-SXM2-16GB
       restartPolicy: Never
