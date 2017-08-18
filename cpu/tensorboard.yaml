@@ -39,9 +39,14 @@ spec:
         - name: log
           nfs:
             server: '140.110.16.155'
-            path: /tensorboard/log
+            path: /nfs/tensorboard/log
       nodeSelector:
         beta.kubernetes.io/os: linux
+        node-role.kubernetes.io/master:
+      # Comment the following tolerations if Dashboard must not be deployed on master
+      tolerations:
+        - key: node-role.kubernetes.io/master
+          effect: NoSchedule
 ---
 apiVersion: v1
 kind: Service

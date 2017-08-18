@@ -73,6 +73,9 @@ spec:
             initialDelaySeconds: 30
             timeoutSeconds: 30
       serviceAccountName: kubernetes-dashboard-user
+      nodeSelector:
+        beta.kubernetes.io/os: linux
+        node-role.kubernetes.io/master:
       # Comment the following tolerations if Dashboard must not be deployed on master
       tolerations:
         - key: node-role.kubernetes.io/master

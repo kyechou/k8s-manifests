@@ -41,15 +41,18 @@ spec:
           volumeMounts:
             - mountPath: /benchmarks
               name: benchmarks
+              readOnly: true
             - mountPath: /nvidia/bin
               name: nv-bin
+              readOnly: true
             - mountPath: /nvidia/lib
               name: nv-lib
+              readOnly: true
       volumes:
         - name: benchmarks
           nfs:
             server: '140.110.16.155'
-            path: /benchmarks
+            path: /nfs/benchmarks
             readOnly: true
         - name: nv-bin
           nfs:
@@ -63,6 +66,6 @@ spec:
             readOnly: true
       nodeSelector:
         beta.kubernetes.io/os: linux
-        alpha.kubernetes.io/nvidia-gpu-name: Tesla-P100-SXM2-16GB
+        #alpha.kubernetes.io/nvidia-gpu-name: Tesla-P100-SXM2-16GB
         #alpha.kubernetes.io/nvidia-gpu-name: Tesla-P100-PCIE-12GB
       restartPolicy: Never

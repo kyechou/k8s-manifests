@@ -25,11 +25,12 @@ spec:
           volumeMounts:
             - mountPath: /benchmarks
               name: benchmarks
+              readOnly: true
       volumes:
         - name: benchmarks
           nfs:
             server: '140.110.16.155'
-            path: /benchmarks
+            path: /nfs/benchmarks
             readOnly: true
       nodeSelector:
         beta.kubernetes.io/os: linux

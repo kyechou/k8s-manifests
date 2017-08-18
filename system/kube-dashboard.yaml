@@ -57,24 +57,28 @@ spec:
     metadata:
       labels:
         k8s-app: kubernetes-dashboard
+      namespace: kube-system
     spec:
       containers:
-      - name: kubernetes-dashboard
-        image: gcr.io/google_containers/kubernetes-dashboard-amd64:v1.6.3
-        ports:
-        - containerPort: 9090
-          protocol: TCP
-        livenessProbe:
-          httpGet:
-            path: /
-            port: 9090
-          initialDelaySeconds: 30
-          timeoutSeconds: 30
+        - name: kubernetes-dashboard
+          image: gcr.io/google_containers/kubernetes-dashboard-amd64:v1.6.3
+          ports:
+            - containerPort: 9090
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 9090
+            initialDelaySeconds: 30
+            timeoutSeconds: 30
       serviceAccountName: kubernetes-dashboard
+      nodeSelector:
+        beta.kubernetes.io/os: linux
+        node-role.kubernetes.io/master:
       # Comment the following tolerations if Dashboard must not be deployed on master
       tolerations:
-      - key: node-role.kubernetes.io/master
-        effect: NoSchedule
+        - key: node-role.kubernetes.io/master
+          effect: NoSchedule
 ---
 kind: Service
 apiVersion: v1
@@ -85,7 +89,8 @@ metadata:
   namespace: kube-system
 spec:
   ports:
-  - port: 80
-    targetPort: 9090
+    - port: 80
+      targetPort: 9090
+      protocol: TCP
   selector:
     k8s-app: kubernetes-dashboard

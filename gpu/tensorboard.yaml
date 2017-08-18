@@ -36,8 +36,10 @@ spec:
               name: log
             - mountPath: /nvidia/bin
               name: nv-bin
+              readOnly: true
             - mountPath: /nvidia/lib
               name: nv-lib
+              readOnly: true
           livenessProbe:
             httpGet:
               path: /
@@ -48,7 +50,7 @@ spec:
         - name: log
           nfs:
             server: '140.110.16.155'
-            path: /tensorboard/log
+            path: /nfs/tensorboard/log
         - name: nv-bin
           nfs:
             server: '140.110.16.155'
@@ -61,6 +63,11 @@ spec:
             readOnly: true
       nodeSelector:
         beta.kubernetes.io/os: linux
+        node-role.kubernetes.io/master:
+      # Comment the following tolerations if Dashboard must not be deployed on master
+      tolerations:
+        - key: node-role.kubernetes.io/master
+          effect: NoSchedule
 ---
 apiVersion: v1
 kind: Service
