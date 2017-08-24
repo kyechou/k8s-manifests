@@ -2,7 +2,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: tensorflow
+  name: tensorflow-p100
   labels:
     app: tensorflow
   namespace: user
@@ -16,29 +16,35 @@ spec:
       namespace: user
     spec:
       containers:
-        - name: tensorflow
+        - name: tensorflow-p100
           image: kyechou/tensorflow:gpu-arch
           resources:
             requests:
-              alpha.kubernetes.io/nvidia-gpu: 8
+              alpha.kubernetes.io/nvidia-gpu: $NGPU
             limits:
-              alpha.kubernetes.io/nvidia-gpu: 8
+              alpha.kubernetes.io/nvidia-gpu: $NGPU
           env:
             - name: PATH
               value: "/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/nvidia/bin"
             - name: LD_LIBRARY_PATH
               value: "/nvidia/lib"
           command:
-            - 'python'
+            - 'sh'
           args:
-            - '/benchmarks/scripts/tf_cnn_benchmarks/tf_cnn_benchmarks.py'
-            - '--local_parameter_device=gpu'
-            - '--num_gpus=8'
-            - '--batch_size=64'
-            - '--model=vgg16'
-            - '--variable_update=replicated'
-            - '--use_nccl=True'
+            - '-c'
+            - >
+              python
+              /benchmarks/scripts/tf_cnn_benchmarks/tf_cnn_benchmarks.py
+              --local_parameter_device=gpu
+              --num_gpus=$NGPU
+              --batch_size=$BATCH
+              --model=$MODEL
+              --variable_update=$UPDATE
+              --use_nccl=True
+              &>/var/log/$NGPU-$BATCH.log
           volumeMounts:
+            - mountPath: /var/log
+              name: log
             - mountPath: /benchmarks
               name: benchmarks
               readOnly: true
@@ -49,6 +55,10 @@ spec:
               name: nv-lib
               readOnly: true
       volumes:
+        - name: log
+          nfs:
+            server: '140.110.16.155'
+            path: /nfs/tf-logs/single/p100/$MODEL/$UPDATE
         - name: benchmarks
           nfs:
             server: '140.110.16.155'
@@ -66,6 +76,7 @@ spec:
             readOnly: true
       nodeSelector:
         beta.kubernetes.io/os: linux
+        kubernetes.io/hostname: bra33
         #alpha.kubernetes.io/nvidia-gpu-name: Tesla-P100-SXM2-16GB
         #alpha.kubernetes.io/nvidia-gpu-name: Tesla-P100-PCIE-12GB
       restartPolicy: Never

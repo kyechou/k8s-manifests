@@ -50,7 +50,7 @@ spec:
         - name: log
           nfs:
             server: '140.110.16.155'
-            path: /nfs/tensorboard/log
+            path: /...
         - name: nv-bin
           nfs:
             server: '140.110.16.155'

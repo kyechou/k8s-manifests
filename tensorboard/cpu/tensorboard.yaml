@@ -39,7 +39,7 @@ spec:
         - name: log
           nfs:
             server: '140.110.16.155'
-            path: /nfs/tensorboard/log
+            path: /...
       nodeSelector:
         beta.kubernetes.io/os: linux
         node-role.kubernetes.io/master:
