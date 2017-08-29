@@ -1,0 +1,334 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: tf-test-ps1
+  labels:
+    app: tf-test-ps
+  namespace: user
+spec:
+  completions: 1
+  parallelism: 1
+  template:
+    metadata:
+      labels:
+        app: tf-test-ps
+      namespace: user
+    spec:
+      containers:
+        - name: tf-test-ps1
+          image: kyechou/tensorflow:cpu-arch
+          env:
+            - name: PATH
+              value: "/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/nvidia/bin"
+            - name: LD_LIBRARY_PATH
+              value: "/nvidia/lib"
+          command:
+            - 'python'
+          args:
+            - /benchmarks/scripts/tf_cnn_benchmarks/tf_cnn_benchmarks.py
+            - --local_parameter_device=cpu
+            - --batch_size=64
+            - --model=alexnet
+            - --variable_update=distributed_replicated
+            - --cross_replica_sync
+            - --job_name=ps
+            - --ps_hosts=tf-test-ps.user.svc.cluster.local:5000,tf-test-ps.user.svc.cluster.local:5001
+            - --worker_hosts=tf-test-worker.user.svc.cluster.local:5000,tf-test-worker.user.svc.cluster.local:5001
+            - --task_index=0
+          volumeMounts:
+            - mountPath: /benchmarks
+              name: benchmarks
+              readOnly: true
+            - mountPath: /nvidia/bin
+              name: nv-bin
+              readOnly: true
+            - mountPath: /nvidia/lib
+              name: nv-lib
+              readOnly: true
+      volumes:
+        - name: benchmarks
+          nfs:
+            server: '140.110.16.155'
+            path: /nfs/benchmarks
+            readOnly: true
+        - name: nv-bin
+          nfs:
+            server: '140.110.16.155'
+            path: /nvidia/bin
+            readOnly: true
+        - name: nv-lib
+          nfs:
+            server: '140.110.16.155'
+            path: /nvidia/lib
+            readOnly: true
+      nodeSelector:
+        beta.kubernetes.io/os: linux
+        node-role.kubernetes.io/master:
+        #kubernetes.io/hostname: bra23
+      tolerations:
+        - key: node-role.kubernetes.io/master
+          effect: NoSchedule
+      restartPolicy: Never
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: tf-test-ps2
+  labels:
+    app: tf-test-ps
+  namespace: user
+spec:
+  completions: 1
+  parallelism: 1
+  template:
+    metadata:
+      labels:
+        app: tf-test-ps
+      namespace: user
+    spec:
+      containers:
+        - name: tf-test-ps2
+          image: kyechou/tensorflow:cpu-arch
+          env:
+            - name: PATH
+              value: "/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/nvidia/bin"
+            - name: LD_LIBRARY_PATH
+              value: "/nvidia/lib"
+          command:
+            - 'python'
+          args:
+            - /benchmarks/scripts/tf_cnn_benchmarks/tf_cnn_benchmarks.py
+            - --local_parameter_device=cpu
+            - --batch_size=64
+            - --model=alexnet
+            - --variable_update=distributed_replicated
+            - --cross_replica_sync
+            - --job_name=ps
+            - --ps_hosts=tf-test-ps.user.svc.cluster.local:5000,tf-test-ps.user.svc.cluster.local:5001
+            - --worker_hosts=tf-test-worker.user.svc.cluster.local:5000,tf-test-worker.user.svc.cluster.local:5001
+            - --task_index=1
+          volumeMounts:
+            - mountPath: /benchmarks
+              name: benchmarks
+              readOnly: true
+            - mountPath: /nvidia/bin
+              name: nv-bin
+              readOnly: true
+            - mountPath: /nvidia/lib
+              name: nv-lib
+              readOnly: true
+      volumes:
+        - name: benchmarks
+          nfs:
+            server: '140.110.16.155'
+            path: /nfs/benchmarks
+            readOnly: true
+        - name: nv-bin
+          nfs:
+            server: '140.110.16.155'
+            path: /nvidia/bin
+            readOnly: true
+        - name: nv-lib
+          nfs:
+            server: '140.110.16.155'
+            path: /nvidia/lib
+            readOnly: true
+      nodeSelector:
+        beta.kubernetes.io/os: linux
+        node-role.kubernetes.io/master:
+        #kubernetes.io/hostname: bra23
+      tolerations:
+        - key: node-role.kubernetes.io/master
+          effect: NoSchedule
+      restartPolicy: Never
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: tf-test-worker1
+  labels:
+    app: tf-test-worker
+  namespace: user
+spec:
+  completions: 1
+  parallelism: 1
+  template:
+    metadata:
+      labels:
+        app: tf-test-worker
+      namespace: user
+    spec:
+      containers:
+        - name: tf-test-worker1
+          image: kyechou/tensorflow:gpu-arch
+          resources:
+            requests:
+              alpha.kubernetes.io/nvidia-gpu: 8
+            limits:
+              alpha.kubernetes.io/nvidia-gpu: 8
+          env:
+            - name: PATH
+              value: "/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/nvidia/bin"
+            - name: LD_LIBRARY_PATH
+              value: "/nvidia/lib"
+          command:
+            - 'python'
+          args:
+            - /benchmarks/scripts/tf_cnn_benchmarks/tf_cnn_benchmarks.py
+            - --local_parameter_device=gpu
+            - --num_gpus=8
+            - --batch_size=64
+            - --model=alexnet
+            - --variable_update=distributed_replicated
+            - --cross_replica_sync
+            - --use_nccl=True
+            - --job_name=worker
+            - --ps_hosts=tf-test-ps.user.svc.cluster.local:5000,tf-test-ps.user.svc.cluster.local:5001
+            - --worker_hosts=tf-test-worker.user.svc.cluster.local:5000,tf-test-worker.user.svc.cluster.local:5001
+            - --task_index=0
+          volumeMounts:
+            - mountPath: /benchmarks
+              name: benchmarks
+              readOnly: true
+            - mountPath: /nvidia/bin
+              name: nv-bin
+              readOnly: true
+            - mountPath: /nvidia/lib
+              name: nv-lib
+              readOnly: true
+      volumes:
+        - name: benchmarks
+          nfs:
+            server: '140.110.16.155'
+            path: /nfs/benchmarks
+            readOnly: true
+        - name: nv-bin
+          nfs:
+            server: '140.110.16.155'
+            path: /nvidia/bin
+            readOnly: true
+        - name: nv-lib
+          nfs:
+            server: '140.110.16.155'
+            path: /nvidia/lib
+            readOnly: true
+      nodeSelector:
+        beta.kubernetes.io/os: linux
+        alpha.kubernetes.io/nvidia-gpu-name: Tesla-P100-SXM2-16GB
+      restartPolicy: Never
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: tf-test-worker2
+  labels:
+    app: tf-test-worker
+  namespace: user
+spec:
+  completions: 1
+  parallelism: 1
+  template:
+    metadata:
+      labels:
+        app: tf-test-worker
+      namespace: user
+    spec:
+      containers:
+        - name: tf-test-worker2
+          image: kyechou/tensorflow:gpu-arch
+          resources:
+            requests:
+              alpha.kubernetes.io/nvidia-gpu: 8
+            limits:
+              alpha.kubernetes.io/nvidia-gpu: 8
+          env:
+            - name: PATH
+              value: "/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/nvidia/bin"
+            - name: LD_LIBRARY_PATH
+              value: "/nvidia/lib"
+          command:
+            - 'python'
+          args:
+            - /benchmarks/scripts/tf_cnn_benchmarks/tf_cnn_benchmarks.py
+            - --local_parameter_device=gpu
+            - --num_gpus=8
+            - --batch_size=64
+            - --model=alexnet
+            - --variable_update=distributed_replicated
+            - --cross_replica_sync
+            - --use_nccl=True
+            - --job_name=worker
+            - --ps_hosts=tf-test-ps.user.svc.cluster.local:5000,tf-test-ps.user.svc.cluster.local:5001
+            - --worker_hosts=tf-test-worker.user.svc.cluster.local:5000,tf-test-worker.user.svc.cluster.local:5001
+            - --task_index=1
+          volumeMounts:
+            - mountPath: /benchmarks
+              name: benchmarks
+              readOnly: true
+            - mountPath: /nvidia/bin
+              name: nv-bin
+              readOnly: true
+            - mountPath: /nvidia/lib
+              name: nv-lib
+              readOnly: true
+      volumes:
+        - name: benchmarks
+          nfs:
+            server: '140.110.16.155'
+            path: /nfs/benchmarks
+            readOnly: true
+        - name: nv-bin
+          nfs:
+            server: '140.110.16.155'
+            path: /nvidia/bin
+            readOnly: true
+        - name: nv-lib
+          nfs:
+            server: '140.110.16.155'
+            path: /nvidia/lib
+            readOnly: true
+      nodeSelector:
+        beta.kubernetes.io/os: linux
+        alpha.kubernetes.io/nvidia-gpu-name: Tesla-P100-SXM2-16GB
+      restartPolicy: Never
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tf-test-ps
+  labels:
+    app: tf-test-ps
+  namespace: user
+spec:
+  ports:
+    - protocol: TCP
+      name: ps1
+      targetPort: 5000
+      port: 5000
+    - protocol: TCP
+      name: ps2
+      targetPort: 5001
+      port: 5001
+  selector:
+    app: tf-test-ps
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tf-test-worker
+  labels:
+    app: tf-test-worker
+  namespace: user
+spec:
+  ports:
+    - protocol: TCP
+      name: worker1
+      targetPort: 5000
+      port: 5000
+    - protocol: TCP
+      name: worker2
+      targetPort: 5001
+      port: 5001
+  selector:
+    app: tf-test-worker

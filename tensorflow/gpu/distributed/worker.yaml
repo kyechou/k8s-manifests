@@ -1,0 +1,100 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: tf-worker$TASK_IDX
+  labels:
+    app: tf-worker$TASK_IDX
+  namespace: user
+spec:
+  completions: 1
+  parallelism: 1
+  template:
+    metadata:
+      labels:
+        app: tf-worker$TASK_IDX
+      namespace: user
+    spec:
+      containers:
+        - name: tf-worker$TASK_IDX
+          image: kyechou/tensorflow:gpu-arch
+          resources:
+            requests:
+              alpha.kubernetes.io/nvidia-gpu: $NGPU
+            limits:
+              alpha.kubernetes.io/nvidia-gpu: $NGPU
+          env:
+            - name: PATH
+              value: "/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/nvidia/bin"
+            - name: LD_LIBRARY_PATH
+              value: "/nvidia/lib"
+          command:
+            - 'sh'
+          args:
+            - '-c'
+            - >
+              python
+              /benchmarks/scripts/tf_cnn_benchmarks/tf_cnn_benchmarks.py
+              --local_parameter_device=gpu
+              --num_gpus=$NGPU
+              --batch_size=$BATCH
+              --model=$MODEL
+              --variable_update=$UPDATE
+              --cross_replica_sync
+              --use_nccl=True
+              --job_name=worker
+              --ps_hosts=$PS_HOSTS
+              --worker_hosts=$WORKER_HOSTS
+              --task_index=$TASK_IDX
+              &>/var/log/$NGPU-$BATCH-$TASK_IDX.log
+          volumeMounts:
+            - mountPath: /var/log
+              name: log
+            - mountPath: /benchmarks
+              name: benchmarks
+              readOnly: true
+            - mountPath: /nvidia/bin
+              name: nv-bin
+              readOnly: true
+            - mountPath: /nvidia/lib
+              name: nv-lib
+              readOnly: true
+      volumes:
+        - name: log
+          nfs:
+            server: '140.110.16.155'
+            path: /nfs/tf-logs/distributed/$WORKER_NUM-workers/$MODEL/$UPDATE
+        - name: benchmarks
+          nfs:
+            server: '140.110.16.155'
+            path: /nfs/benchmarks
+            readOnly: true
+        - name: nv-bin
+          nfs:
+            server: '140.110.16.155'
+            path: /nvidia/bin
+            readOnly: true
+        - name: nv-lib
+          nfs:
+            server: '140.110.16.155'
+            path: /nvidia/lib
+            readOnly: true
+      nodeSelector:
+        beta.kubernetes.io/os: linux
+        alpha.kubernetes.io/nvidia-gpu-name: Tesla-P100-SXM2-16GB
+      restartPolicy: Never
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tf-worker$TASK_IDX
+  labels:
+    app: tf-worker$TASK_IDX
+  namespace: user
+spec:
+  ports:
+    - protocol: TCP
+      targetPort: 5000
+      port: 5000
+  selector:
+    app: tf-worker$TASK_IDX
